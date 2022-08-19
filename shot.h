@@ -3,8 +3,9 @@
 
 #include <QWidget>
 #include <QToolBar>
+#include <QDir>
 
-class QSystemTrayIcon;
+#include <QSystemTrayIcon>
 
 class Shot : public QWidget
 {
@@ -18,6 +19,9 @@ public:
     void register_tray(QSystemTrayIcon* tray);
 
     void register_tool_bar(QToolBar* tool_bar);
+
+public slots:
+    void tray_msg(QSystemTrayIcon::ActivationReason reason);
 
     void shot_screen();
 
@@ -40,6 +44,7 @@ private:
     bool is_left_press;
     QPoint start_point;
     QPoint end_point;
+    QDir* tmp_dir;
 
 private:
     struct Select_Info {
@@ -50,5 +55,12 @@ private:
     };
 
     Select_Info get_select_info();
+
+private:
+#ifdef __linux__
+    static constexpr const char* tmp_dir_path = "/tmp/shot/";
+#elif _WIN32
+    static constexpr const char* tmp_dir_path = "./tmp/";
+#endif
 };
 #endif // SHOT_H

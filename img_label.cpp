@@ -3,19 +3,31 @@
 #include <QMouseEvent>
 #include <QMenu>
 #include <QWheelEvent>
+#include <QTransform>
+#include <QPainter>
+#include <QImage>
+#include <QFileDialog>
+#include <QApplication>
+#include <QClipboard>
 
 Img_Label::Img_Label(QWidget* parent) : QLabel(parent) {
     this->setAttribute(Qt::WA_DeleteOnClose);
     this->setWindowFlags(Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint);
     this->setCursor(Qt::SizeAllCursor);
-
     this->is_left_press = false;
     this->menu = nullptr;
+    this->angle_now = 0;
+    this->setScaledContents(false);
 }
 
 void Img_Label::init_menu() {
     this->menu = new QMenu(this);
-    auto close_actoin = menu->addAction("close");
+    auto save_action = menu->addAction("另存为");
+    connect(save_action, &QAction::triggered, this, &Img_Label::save_file);
+    auto cp2clip_action = menu->addAction("复制到剪切板");
+    connect(cp2clip_action, &QAction::triggered, this, &Img_Label::cp2clip);
+    menu->addSeparator();
+    auto close_actoin = menu->addAction("关闭");
     connect(close_actoin, &QAction::triggered, this, &Img_Label::close);
 }
 
@@ -54,26 +66,43 @@ void Img_Label::mouseMoveEvent(QMouseEvent* e) {
             y += offset_y;
             this->move(x, y);
             last_pos = pos;
-            // qDebug() << x << ' ' << y;
         }
     }
 }
 
-//void Img_Label::wheelEvent(QWheelEvent* e) {
-//    auto angle = e->angleDelta();
+void Img_Label::keyPressEvent(QKeyEvent *e) {
+    if(e->key() == Qt::Key_Up) {
+        rotate_pixmap(90);
+    } else if(e->key() == Qt::Key_Down) {
+        rotate_pixmap(-90);
+    }
+}
 
-//    if(!angle.isNull()) {
-//        int step = angle.y() / 8;
+void Img_Label::set_tmp_path(const QString &path) {
+    this->tmp_path = path;
+}
 
-//        int w = this->width();
-//        int h = this->height();
+void Img_Label::save_file() {
 
-//        int h_new = h + step * (h / (1.0 * w + h));
-//        auto pixmap = this->pixmap()
-//                .scaled(w, h_new, Qt::KeepAspectRatio);
-//        int w_new = pixmap.width();
+    auto file_name = QFileDialog::getSaveFileName(this, tr("保存图片")
+                                                  , this->tmp_path,
+                                                  tr("*.png"));
+    if(!file_name.isNull())
+        this->pixmap().save(file_name, "png");
+}
 
-//        this->setPixmap(pixmap);
-//        this->resize(w_new, h_new);
-//    }
-//}
+void Img_Label::cp2clip() {
+    QApplication::clipboard()->setPixmap(this->pixmap());
+}
+
+void Img_Label::rotate_pixmap(int angle) {
+    QTransform transform;
+    angle_now += angle;
+    transform.rotate(angle_now);
+    QImage img(this->tmp_path);
+    img = img.transformed(transform);
+    int w = this->width();
+    int h = this->height();
+    this->resize(h, w);
+    this->setPixmap(QPixmap::fromImage(img));
+}

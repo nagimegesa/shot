@@ -17,6 +17,10 @@ int main(int argc, char *argv[])
     Shot w;
     QSystemTrayIcon* tray = new QSystemTrayIcon();
     tray->setIcon(QIcon(":/image/resource/tray_icon.jpg"));
+    tray->connect(tray,
+                  SIGNAL(activated(QSystemTrayIcon::ActivationReason)),
+                  &w,
+                  SLOT(tray_msg(QSystemTrayIcon::ActivationReason)));
     QMenu* tray_menu = get_tray_menu(&w);
     tray->setContextMenu(tray_menu);
     w.register_tray(tray);

@@ -9,6 +9,7 @@
 #include <QMouseEvent>
 #include <QApplication>
 #include <QPixmap>
+#include <QDateTime>
 #include "img_label.h"
 
 Shot::Shot(QWidget *parent)
@@ -20,8 +21,11 @@ Shot::Shot(QWidget *parent)
     this->resize(QApplication::primaryScreen()->size());
     this->setAttribute(Qt::WA_TranslucentBackground);
     this->is_left_press = false;
+    this->tmp_dir = new QDir(QString(tmp_dir_path));
+    if(!tmp_dir->exists()) {
+        tmp_dir->mkpath(tmp_dir_path);
+    }
 }
-
 
 void Shot::register_tray(QSystemTrayIcon* tray) {
     this->system_tray = tray;
@@ -34,13 +38,17 @@ void Shot::register_tool_bar(QToolBar* tool_bar) {
     tool_bar->setParent(this);
 }
 
+void Shot::tray_msg(QSystemTrayIcon::ActivationReason reason) {
+    if(reason == QSystemTrayIcon::Trigger) {
+        this->show();
+    }
+}
+
 void Shot::shot_screen() {
-    qDebug() << __func__;
     this->show();
 }
 
 void Shot::keyPressEvent(QKeyEvent* e) {
-    qDebug() << __func__;
     if(e->key() == Qt::Key_Escape) {
         this->hide();
     }
@@ -65,8 +73,6 @@ void Shot::mousePressEvent(QMouseEvent* e) {
         is_left_press = true;
         start_point = e->pos();
         tool_bar->hide();
-
-
     }
 }
 
@@ -86,18 +92,20 @@ void Shot::mouseMoveEvent(QMouseEvent* e) {
 }
 
 void Shot::put_img() {
-    qDebug() << __func__;
-
     const auto [up_x, up_y, blow_x, blow_y] = get_select_info();
     QPixmap pixmap = QApplication::primaryScreen()
             ->grabWindow(0, up_x - 1, up_y - 1, blow_x - up_x + 2, blow_y - up_y + 2);
+    QString tmp_path = tmp_dir->path() + "/"
+            + QDateTime::currentDateTime()
+            .toString("yyyy-MM-dd-hh-mm-ss-z") + ".png";
 
+    pixmap.save(tmp_path, "png");
     Img_Label* img_label = new Img_Label();
+    img_label->set_tmp_path(tmp_path);
     img_label->init_menu();
     img_label->setPixmap(pixmap);
     img_label->move(up_x, up_y);
     img_label->show();
-
     tool_bar->hide();
     this->hide();
 }
@@ -111,5 +119,6 @@ Shot::Select_Info Shot::get_select_info() {
 }
 
 Shot::~Shot() {
-
+    tmp_dir->removeRecursively();
+    delete tmp_dir;
 }
